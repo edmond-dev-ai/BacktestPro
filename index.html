@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>BacktestPro</title>
+    <!-- Link to our external stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Import the Lightweight Charts library -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Import the PapaParse library for easy CSV handling -->
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Top Header: Symbol info, etc. -->
+        <div class="top-header">
+            <div class="logo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/></svg>
+                BacktestPro
+            </div>
+            <div class="separator"></div>
+            <div id="symbol-info-header" class="symbol-info">
+                <span class="symbol-name">--</span>
+                <span class="symbol-price">--</span>
+                <span class="price-change">--</span>
+            </div>
+            <div class="status-indicator" id="utc-time">--:--:-- UTC</div>
+        </div>
+
+        <!-- Main Toolbar: Timeframes, Indicators, etc. -->
+        <div class="main-toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-btn">SPY</button>
+            </div>
+            <div class="separator"></div>
+            <!-- Add data-timeframe attributes to each button for our script -->
+            <div class="timeframe-group">
+                <button class="toolbar-btn timeframe-btn" data-timeframe="1m">1m</button>
+                <button class="toolbar-btn timeframe-btn" data-timeframe="5m">5m</button>
+                <button class="toolbar-btn timeframe-btn" data-timeframe="15m">15m</button>
+                <button class="toolbar-btn timeframe-btn" data-timeframe="1H">1h</button>
+                <button class="toolbar-btn timeframe-btn" data-timeframe="4H">4h</button>
+                <button class="toolbar-btn timeframe-btn active" data-timeframe="D">D</button>
+            </div>
+            <div class="separator"></div>
+            <div class="toolbar-group">
+                 <button class="toolbar-btn">Indicators</button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Left Drawing Toolbar -->
+            <div class="left-sidebar">
+                <!-- Buttons for drawing tools go here -->
+            </div>
+
+            <!-- Chart Area -->
+            <div class="chart-area">
+                <div class="loading-spinner" id="loading-spinner"></div>
+                <div id="chart-container"></div>
+                <!-- OHLC Overlay -->
+                <div id="ohlc-overlay" class="chart-overlay">
+                    <div class="ohlc-data">
+                        <span id="overlay-symbol-name" style="color: #d1d4dc; font-weight: 600; margin-right: 8px;">SPY</span>
+                        <div class="ohlc-item"><span class="ohlc-label">O</span><span class="ohlc-value" id="ohlc-open">--</span></div>
+                        <div class="ohlc-item"><span class="ohlc-label">H</span><span class="ohlc-value" id="ohlc-high">--</span></div>
+                        <div class="ohlc-item"><span class="ohlc-label">L</span><span class="ohlc-value" id="ohlc-low">--</span></div>
+                        <div class="ohlc-item"><span class="ohlc-label">C</span><span class="ohlc-value" id="ohlc-close">--</span></div>
+                        <div class="ohlc-item"><span id="ohlc-change">-- (--.--)</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Watchlist Panel -->
+            <div class="right-sidebar">
+                <div class="right-panel-header">Watchlist</div>
+                <div class="right-panel-content"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Strategy Tester, etc. -->
+        <div class="bottom-panel">
+            <div class="bottom-tabs">
+                <button class="bottom-tab active">Strategy Tester</button>
+                <button class="bottom-tab">Trading Panel</button>
+            </div>
+            <div class="bottom-content">Strategy Tester Content...</div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <!-- Status items go here -->
+        </div>
+    </div>
+    
+    <!-- We defer loading our script until the rest of the page is parsed -->
+    <script src="renderer.js"></script>
+</body>
+</html>
