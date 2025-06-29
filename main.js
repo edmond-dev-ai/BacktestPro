@@ -1,20 +1,22 @@
-// main.js - A simplified version for testing the API connection.
+// main.js - Final version that fetches data from the public GitHub URL.
 
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const axios = require('axios');
-const crypto = require('crypto');
+const { spawn } = require('child_process');
 
 // --- Configuration ---
-const QC_USER_ID = '386333';
-const QC_API_TOKEN = 'c65a1873cb3039acc5b76def3ec5614f097a30da0cc23b41be169abdc2866603';
-const QC_PROJECT_ID = '28418589';
+const GITHUB_USERNAME = "edmond-dev-ai"; // Your GitHub Username
+const REPO_NAME = "BacktestPro";      // Your GitHub Repository Name
+const DATA_FILE = "data/SPY_1minute_data.csv";
+// This is the public URL where your data will be stored.
+const DATA_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USERNAME}/${REPO_NAME}@latest/${DATA_FILE}`;
 
 // --- Main Window Creation ---
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1600,
+    height: 900,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -25,64 +27,43 @@ function createWindow() {
 }
 
 // --- Application Lifecycle ---
-app.whenReady().then(() => {
-    createWindow();
-});
+app.whenReady().then(createWindow);
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+
+// --- IPC Handlers ---
+
+// This handler now downloads the data from the public jsDelivr URL.
+ipcMain.handle('get-chart-data', async () => {
+  try {
+    console.log(`Fetching data from public URL: ${DATA_URL}`);
+    // Use axios to download the CSV file content as text.
+    const response = await axios.get(DATA_URL, { timeout: 60000 }); // 60 second timeout
+    console.log("Data downloaded successfully from GitHub.");
+    return response.data; // The raw CSV text
+  } catch (error) {
+    console.error("Failed to download data from GitHub:", error.message);
+    throw new Error("Could not download data file from the cloud. The cloud bot may not have run yet.");
   }
 });
 
-// --- API Test Function ---
-async function runAPITest() {
-    try {
-        console.log("--- STARTING API TEST ---");
-        const url = `https://www.quantconnect.com/api/v2/object-store/read`;
-        const simpleApiKey = 'test_key.txt'; // The simple key we are testing
-
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        const timeStampedToken = `${QC_API_TOKEN}:${timestamp}`;
-        const hashedToken = crypto.createHash('sha256').update(timeStampedToken, 'utf8').digest('hex');
-        const authString = `${QC_USER_ID}:${hashedToken}`;
-        const authBase64 = Buffer.from(authString).toString('base64');
-
-        const headers = {
-            'Authorization': `Basic ${authBase64}`,
-            'Timestamp': timestamp
-        };
-        
-        const params = {
-            projectId: QC_PROJECT_ID,
-            key: simpleApiKey
-        };
-
-        console.log(`Requesting URL via GET: ${url} for key: ${simpleApiKey}`);
-        
-        const response = await axios.get(url, { params, headers, timeout: 30000 });
-        
-        console.log("--- TEST RESULT ---");
-        if (response.data.success) {
-            console.log("SUCCESS! The server found the file.");
-            console.log("File Content:", response.data.data);
-            return { success: true, content: response.data.data };
-        } else {
-            console.log("FAILURE! The server responded but the call was not successful.");
-            console.log("Errors:", response.data.errors);
-            return { success: false, errors: response.data.errors };
-        }
-
-    } catch (error) {
-        console.log("--- TEST FAILED ---");
-        if (error.response) {
-            console.error(`FAILURE! Server responded with status: ${error.response.status}`);
-        } else {
-            console.error("FAILURE! A network error occurred:", error.message);
-        }
-        return { success: false, error: error.message };
-    }
-}
-
-// When the UI is ready, it will invoke this handler.
-ipcMain.handle('run-test', runAPITest);
+// The resampling handler stays the same.
+ipcMain.handle('resample-data', async (event, dailyCsvData, timeframe) => {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python', ['resampler.py', timeframe]);
+    let resultData = '';
+    let errorData = '';
+    pythonProcess.stdout.on('data', (data) => { resultData += data.toString(); });
+    pythonProcess.stderr.on('data', (data) => { errorData += data.toString(); });
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve(JSON.parse(resultData));
+      } else {
+        reject(new Error(`Python script exited with code ${code}`));
+      }
+    });
+    pythonProcess.stdin.write(dailyCsvData);
+    pythonProcess.stdin.end();
+  });
+});
